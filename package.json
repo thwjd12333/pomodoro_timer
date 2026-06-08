@@ -4,33 +4,35 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier --write src",
-    "format:check": "prettier --check src"
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "lint": "eslint src entrypoints",
+    "lint:fix": "eslint src entrypoints --fix",
+    "format": "prettier --write src entrypoints",
+    "format:check": "prettier --check src entrypoints"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-time-picker": "^8.0.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.26",
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.0",
     "@types/chrome": "^0.0.287",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@wxt-dev/module-react": "^1.2.2",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "prettier": "^3.8.3",
+    "tailwindcss": "^4.3.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.60.1",
-    "vite": "^5.4.11"
+    "wxt": "^0.20.26"
   }
 }

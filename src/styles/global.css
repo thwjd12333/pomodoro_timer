@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+:root {
+  --color-accent: #6470d0;
+  --color-accent-hover: #5762c4;
+  --color-accent-active: #4a54b8;
+}
+
+:root[data-theme='dark'] {
+  --bg-primary: #1c1c1e;
+  --bg-card: #2c2c2e;
+  --bg-card-hover: #3a3a3c;
+  --bg-button: #0d0d0d;
+  --bg-button-hover: #1a1a1a;
+  --bg-button-active: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #8e8e93;
+  --border: #38383a;
+}
+
+:root[data-theme='light'] {
+  --bg-primary: #f2f2f7;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f5;
+  --bg-button: #1c1c1e;
+  --bg-button-hover: #2c2c2e;
+  --bg-button-active: #3a3a3c;
+  --text-primary: #000000;
+  --text-secondary: #6c6c70;
+  --border: #dcdce0;
+}
+
+/* time input 네이티브 피커 비활성화 */
+input[type='time']::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* 스크롤바 숨김 (스크롤은 동작) */
+.scroll-area {
+  scrollbar-width: none;
+}
+.scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* number input 스피너 제거 */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+html,
+body {
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+body {
+  width: 380px;
+  height: 580px;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
