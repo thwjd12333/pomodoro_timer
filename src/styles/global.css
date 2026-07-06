@@ -30,6 +30,18 @@
   --border: #dcdce0;
 }
 
+/* 바텀시트 등장 애니메이션 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
 /* time input 네이티브 피커 비활성화 */
 input[type='time']::-webkit-calendar-picker-indicator {
   display: none;
@@ -67,4 +79,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
     'Noto Sans KR', sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
 }
