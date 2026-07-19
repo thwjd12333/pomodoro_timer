@@ -1,6 +1,13 @@
+import type { TimerPhase } from './timer'
+
 export type NoteType = 'pomodoro' | 'schedule'
-export type NoteStatus = 'idle' | 'running' | 'paused' | 'done' | 'failed' | 'skipped'
-export type RepeatType = 'none' | 'daily' | 'weekdays'
+export type NoteStatus =
+  | 'idle'
+  | 'running'
+  | 'paused'
+  | 'done'
+  | 'failed'
+  | 'skipped'
 
 interface BaseNote {
   id: string
@@ -10,8 +17,6 @@ interface BaseNote {
   createdAt: number
   date: string // 'YYYY-MM-DD' — 날짜 그룹 키
   tagId: string | null
-  repeat: RepeatType
-  parentId: string | null // 반복 생성된 경우 원본 노트 ID
 }
 
 export interface PomodoroNote extends BaseNote {
@@ -19,6 +24,9 @@ export interface PomodoroNote extends BaseNote {
   workDuration: number // 분 단위
   breakDuration: number // 분 단위
   sessionCount: number // 완료된 세션 수
+  extendedMinutes: number // 누적 연장 시간(분), 0이면 연장 없음
+  // 다른 노트 시작으로 밀려났을 때의 타이머 스냅샷 — 재개 시 이 시점부터 이어감
+  suspendedTimer: { phase: TimerPhase; remaining: number; total: number } | null
   notifyOnComplete: boolean
   soundOnComplete: boolean
 }

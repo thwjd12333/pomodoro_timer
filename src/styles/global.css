@@ -55,7 +55,6 @@ input[type='time']::-webkit-calendar-picker-indicator {
   display: none;
 }
 
-
 /* number input 스피너 제거 */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
@@ -76,8 +75,9 @@ body {
   width: 380px;
   height: 580px;
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-    'Noto Sans KR', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
