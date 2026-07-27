@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import type { PomodoroNote } from '../types/note'
-import { useAppStore, type PendingDecision } from '../store/useAppStore'
+import {
+  findNextNote,
+  useAppStore,
+  type PendingDecision,
+} from '../store/useAppStore'
 import { DurationInput } from './NoteBottomSheet'
 
 type Step = 'confirm' | 'choose' | 'extend' | 'breakEnd'
@@ -30,11 +34,13 @@ const PopupContent = ({
   const extendNote = useAppStore(s => s.extendNote)
   const startNextSession = useAppStore(s => s.startNextSession)
   const finishNote = useAppStore(s => s.finishNote)
+  const notes = useAppStore(s => s.notes)
 
   const [step, setStep] = useState<Step>(
     kind === 'breakEnd' ? 'breakEnd' : 'confirm',
   )
   const [extraMin, setExtraMin] = useState(note.workDuration)
+  const nextNote = kind === 'breakEnd' ? findNextNote(note, notes) : null
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center px-8">
@@ -115,6 +121,7 @@ const PopupContent = ({
               </button>
               <button
                 onClick={startNextSession}
+                disabled={!nextNote}
                 className={buttonClass('accent')}
               >
                 시작하기

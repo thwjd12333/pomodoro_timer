@@ -4,20 +4,26 @@ import { useAppStore } from '../store/useAppStore'
 import { DEFAULT_TAGS, TAG_COLORS } from '../utils/constants'
 import { formatDuration, formatTime } from '../utils/formatters'
 import { minutesBetween } from '../utils/timeUtils'
-import { ActionButton, NoteCardFrame } from './noteCardParts'
+import { ActionButton, NoteCardFrame } from './NoteCardParts'
 
 // 일정 타이머 카드 — 대기 중엔 시작 안내, 시작하면 종료 시각까지 남은 시간 카운트다운
 const ScheduleNoteCard = ({
   note,
   timer,
+  isFirst,
+  isLast,
   onDeleteRequest,
 }: {
   note: ScheduleNoteData
   timer: TimerState
+  isFirst: boolean
+  isLast: boolean
   onDeleteRequest: () => void
 }) => {
   const startTimer = useAppStore(s => s.startTimer)
   const completeNote = useAppStore(s => s.completeNote)
+  const moveNoteUp = useAppStore(s => s.moveNoteUp)
+  const moveNoteDown = useAppStore(s => s.moveNoteDown)
 
   const tag = DEFAULT_TAGS.find(t => t.id === note.tagId)
   const isRunning = note.status === 'running' && timer.noteId === note.id
@@ -47,6 +53,10 @@ const ScheduleNoteCard = ({
         )
       }
       tagColor={tag ? TAG_COLORS[tag.color] : undefined}
+      isFirst={isFirst}
+      isLast={isLast}
+      onMoveUp={() => moveNoteUp(note.id)}
+      onMoveDown={() => moveNoteDown(note.id)}
       onDeleteRequest={onDeleteRequest}
     />
   )

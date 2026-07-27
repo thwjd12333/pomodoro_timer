@@ -48,6 +48,54 @@ export const DeleteButton = ({ onClick }: { onClick: () => void }) => (
   </button>
 )
 
+// 미완료 노트 카드의 진행 순서 변경 — 그룹 내 첫/마지막 항목은 해당 방향 비활성화
+export const OrderButtons = ({
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+}: {
+  isFirst: boolean
+  isLast: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
+}) => (
+  <div className="flex flex-col shrink-0">
+    <button
+      onClick={onMoveUp}
+      disabled={isFirst}
+      aria-label="순서 위로"
+      className="w-5 h-4 flex items-center justify-center border-0 outline-none cursor-pointer bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all duration-150"
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M18 15l-6-6-6 6"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+    <button
+      onClick={onMoveDown}
+      disabled={isLast}
+      aria-label="순서 아래로"
+      className="w-5 h-4 flex items-center justify-center border-0 outline-none cursor-pointer bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all duration-150"
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M6 9l6 6 6-6"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  </div>
+)
+
 // primary(완료 등 확정 동작)는 초록 채움, 기본은 외곽선 스타일
 export const ActionButton = ({
   label,
@@ -150,6 +198,10 @@ export const NoteCardFrame = ({
   actions,
   tagColor,
   ringColor,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
   onDeleteRequest,
 }: {
   type: NoteType
@@ -163,6 +215,10 @@ export const NoteCardFrame = ({
   actions: ReactNode
   tagColor?: string
   ringColor?: string // 진행 중 테두리 색 (미지정 시 타입 색상)
+  isFirst: boolean
+  isLast: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
   onDeleteRequest: () => void
 }) => {
   const accent = TYPE_META[type].color
@@ -193,7 +249,15 @@ export const NoteCardFrame = ({
             style={{ backgroundColor: STATUS_DOT[status] }}
           />
         </div>
-        <DeleteButton onClick={onDeleteRequest} />
+        <div className="flex items-center gap-1">
+          <OrderButtons
+            isFirst={isFirst}
+            isLast={isLast}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+          />
+          <DeleteButton onClick={onDeleteRequest} />
+        </div>
       </div>
 
       <p className="text-[15px] font-semibold text-[var(--text-primary)]">

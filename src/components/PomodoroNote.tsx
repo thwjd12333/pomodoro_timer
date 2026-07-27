@@ -17,7 +17,7 @@ import { getTodayDate } from '../utils/timeUtils'
 import NoteBottomSheet from './NoteBottomSheet'
 import ScheduleNoteCard from './ScheduleNote'
 import SessionEndPopup from './SessionEndPopup'
-import { ActionButton, FinishedNoteRow, NoteCardFrame } from './noteCardParts'
+import { ActionButton, FinishedNoteRow, NoteCardFrame } from './NoteCardParts'
 
 // 독립 창으로 열렸는지 여부 — 창 안에서는 '창으로 열기' 버튼을 숨김
 const isWindowMode =
@@ -35,20 +35,20 @@ const openStandaloneWindow = async () => {
   window.close()
 }
 
-// 정렬 우선순위: 진행/일시정지 → 대기 → 종료 상태
-const STATUS_ORDER: Record<NoteStatus, number> = {
-  running: 0,
-  paused: 0,
-  idle: 1,
-  done: 2,
-  failed: 2,
-  skipped: 2,
-}
-
 const isFinished = (note: Note): boolean =>
   note.status === 'done' ||
   note.status === 'failed' ||
   note.status === 'skipped'
+
+// 정렬 우선순위: 미완료(0) → 완료(1). 동률 시 미완료는 order 오름차순, 완료는 최신순
+const STATUS_ORDER: Record<NoteStatus, number> = {
+  idle: 0,
+  running: 0,
+  paused: 0,
+  done: 1,
+  failed: 1,
+  skipped: 1,
+}
 
 const DateHeading = ({ date }: { date: string }) => (
   <div className="flex items-center gap-2 mt-1.5 mb-0.5">
@@ -103,10 +103,14 @@ const DeleteConfirmDialog = ({
 const PomodoroCard = ({
   note,
   timer,
+  isFirst,
+  isLast,
   onDeleteRequest,
 }: {
   note: PomodoroNoteData
   timer: TimerState
+  isFirst: boolean
+  isLast: boolean
   onDeleteRequest: () => void
 }) => {
   const startTimer = useAppStore(s => s.startTimer)
@@ -114,6 +118,8 @@ const PomodoroCard = ({
   const resumeNote = useAppStore(s => s.resumeNote)
   const completeSession = useAppStore(s => s.completeSession)
   const completeNote = useAppStore(s => s.completeNote)
+  const moveNoteUp = useAppStore(s => s.moveNoteUp)
+  const moveNoteDown = useAppStore(s => s.moveNoteDown)
 
   const tag = DEFAULT_TAGS.find(t => t.id === note.tagId)
   const isActive = timer.noteId === note.id
@@ -176,6 +182,10 @@ const PomodoroCard = ({
       }
       tagColor={tag ? TAG_COLORS[tag.color] : undefined}
       ringColor={isActive ? PHASE_COLORS[timer.phase] : undefined}
+      isFirst={isFirst}
+      isLast={isLast}
+      onMoveUp={() => moveNoteUp(note.id)}
+      onMoveDown={() => moveNoteDown(note.id)}
       onDeleteRequest={onDeleteRequest}
     />
   )
@@ -188,12 +198,12 @@ const PomodoroNote = () => {
   const deleteNote = useAppStore(s => s.deleteNote)
   const timer = useTimer()
 
-  // 같은 상태끼리는 타입 구분 없이 생성 최신순
-  const sortedNotes = [...notes].sort(
-    (a, b) =>
-      STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
-      b.createdAt - a.createdAt,
-  )
+  // 미완료 그룹은 order 오름차순, 완료 그룹은 생성 최신순
+  const sortedNotes = [...notes].sort((a, b) => {
+    const statusDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+    if (statusDiff !== 0) return statusDiff
+    return isFinished(a) ? b.createdAt - a.createdAt : a.order - b.order
+  })
 
   // 날짜별 그룹 — 최신 날짜가 위, 그룹 내부는 상태 정렬 유지
   const notesByDate = new Map<string, Note[]>()
@@ -247,12 +257,13 @@ const PomodoroNote = () => {
       </header>
       <div className="h-px bg-[var(--border)] shrink-0" />
       <div className="scroll-area flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
-        {dates.map(date => (
-          <div key={date} className="flex flex-col gap-2.5">
-            <DateHeading date={date} />
-            {notesByDate
-              .get(date)
-              ?.map(note =>
+        {dates.map(date => {
+          const dateNotes = notesByDate.get(date) ?? []
+          const activeIds = dateNotes.filter(n => !isFinished(n)).map(n => n.id)
+          return (
+            <div key={date} className="flex flex-col gap-2.5">
+              <DateHeading date={date} />
+              {dateNotes.map(note =>
                 isFinished(note) ? (
                   <FinishedNoteRow
                     key={note.id}
@@ -264,6 +275,8 @@ const PomodoroNote = () => {
                     key={note.id}
                     note={note}
                     timer={timer}
+                    isFirst={activeIds[0] === note.id}
+                    isLast={activeIds[activeIds.length - 1] === note.id}
                     onDeleteRequest={() => setDeleteTarget(note)}
                   />
                 ) : (
@@ -271,12 +284,15 @@ const PomodoroNote = () => {
                     key={note.id}
                     note={note}
                     timer={timer}
+                    isFirst={activeIds[0] === note.id}
+                    isLast={activeIds[activeIds.length - 1] === note.id}
                     onDeleteRequest={() => setDeleteTarget(note)}
                   />
                 ),
               )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
       </div>
 
       <NoteBottomSheet

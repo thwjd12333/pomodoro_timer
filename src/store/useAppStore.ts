@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { Note } from '../types/note'
+import type { Note, NoteInput, NoteStatus } from '../types/note'
 import {
   IDLE_TIMER_STATE,
   type TimerPhase,
@@ -26,7 +26,7 @@ interface AppStore {
   notes: Note[]
   timerState: TimerState
   pendingDecision: PendingDecision | null
-  addNote: (note: Note) => void
+  addNote: (note: NoteInput) => void
   deleteNote: (noteId: string) => void
   startTimer: (noteId: string) => void
   pauseTimer: () => void
@@ -39,12 +39,39 @@ interface AppStore {
   extendNote: (extraMin: number) => void
   startNextSession: () => void
   finishNote: () => void
+  moveNoteUp: (noteId: string) => void
+  moveNoteDown: (noteId: string) => void
 }
 
 const STORAGE_KEY = 'focuscal'
 
 const remainingSeconds = (endsAt: number): number =>
   Math.max(0, Math.round((endsAt - Date.now()) / 1000))
+
+const isActiveStatus = (status: NoteStatus): boolean =>
+  status === 'idle' || status === 'running' || status === 'paused'
+
+// 같은 날짜에서 현재 노트 다음 순서의 "시작 가능한" idle 노트를 찾음 —
+// 종료 시각이 이미 지난 일정 노트는 건너뛰고 그다음 순서를 계속 확인
+export const findNextNote = (currentNote: Note, notes: Note[]): Note | null => {
+  const candidates = notes
+    .filter(
+      n =>
+        n.date === currentNote.date &&
+        n.status === 'idle' &&
+        n.order > currentNote.order,
+    )
+    .sort((a, b) => a.order - b.order)
+  for (const candidate of candidates) {
+    if (
+      candidate.type === 'schedule' &&
+      secondsUntilToday(candidate.endTime) <= 0
+    )
+      continue
+    return candidate
+  }
+  return null
+}
 
 // 다른 노트가 타이머를 가져갈 때 기존 활성 노트를 보존 —
 // 뽀모도로는 남은 시간을 스냅샷해 일시정지로, 일정 타이머는 대기로 되돌림
@@ -79,7 +106,14 @@ export const useAppStore = create<AppStore>()(
       timerState: IDLE_TIMER_STATE,
       pendingDecision: null,
 
-      addNote: note => set(s => ({ notes: [...s.notes, note] })),
+      addNote: note => {
+        const activeOrders = get()
+          .notes.filter(n => n.date === note.date && isActiveStatus(n.status))
+          .map(n => n.order)
+        const order =
+          activeOrders.length > 0 ? Math.max(...activeOrders) + 1 : 0
+        set(s => ({ notes: [...s.notes, { ...note, order }] }))
+      },
 
       deleteNote: noteId =>
         set(s => ({
@@ -305,16 +339,35 @@ export const useAppStore = create<AppStore>()(
         }))
       },
 
-      // [시작하기] — 휴식 종료 응답에서 다음 집중 세션 시작
+      // [시작하기] — 휴식 종료 응답에서 같은 날짜의 다음 idle 노트로 진행, 현재 노트(A)는 완료 처리
       startNextSession: () => {
         const { pendingDecision, notes } = get()
         if (pendingDecision?.kind !== 'breakEnd') return
         const note = notes.find(n => n.id === pendingDecision.noteId)
         if (!note || note.type !== 'pomodoro') return
-        const total = note.workDuration * 60
-        set({
+
+        const nextNote = findNextNote(note, notes)
+        if (!nextNote) return // 버튼이 비활성화되어 호출되지 않아야 하므로 방어적으로만 처리
+
+        const total =
+          nextNote.type === 'pomodoro'
+            ? nextNote.workDuration * 60
+            : secondsUntilToday(nextNote.endTime)
+        if (total <= 0) return
+
+        set(s => ({
+          notes: s.notes.map(n => {
+            if (n.id === note.id) return { ...n, status: 'done' as const }
+            if (n.id === nextNote.id)
+              return {
+                ...n,
+                status: 'running' as const,
+                ...(n.type === 'pomodoro' ? { suspendedTimer: null } : {}),
+              }
+            return n
+          }),
           timerState: {
-            noteId: note.id,
+            noteId: nextNote.id,
             phase: 'work' as TimerPhase,
             isRunning: true,
             total,
@@ -322,7 +375,12 @@ export const useAppStore = create<AppStore>()(
             endsAt: Date.now() + total * 1000,
           },
           pendingDecision: null,
-        })
+        }))
+        if (nextNote.type === 'schedule')
+          notify('scheduleStart', nextNote.title, {
+            os: nextNote.notifyOnStart,
+            sound: nextNote.soundOnStart,
+          })
       },
 
       // [그만하기] — 노트를 완료 상태로 종료
@@ -377,6 +435,45 @@ export const useAppStore = create<AppStore>()(
           pendingDecision: null,
         }))
       },
+
+      // 같은 날짜 + 미완료 노트들만 대상으로 order 오름차순 정렬 후 인접 노트와 order 교환
+      moveNoteUp: noteId =>
+        set(s => {
+          const note = s.notes.find(n => n.id === noteId)
+          if (!note || !isActiveStatus(note.status)) return s
+          const group = s.notes
+            .filter(n => n.date === note.date && isActiveStatus(n.status))
+            .sort((a, b) => a.order - b.order)
+          const index = group.findIndex(n => n.id === noteId)
+          if (index <= 0) return s
+          const prev = group[index - 1]
+          return {
+            notes: s.notes.map(n => {
+              if (n.id === note.id) return { ...n, order: prev.order }
+              if (n.id === prev.id) return { ...n, order: note.order }
+              return n
+            }),
+          }
+        }),
+
+      moveNoteDown: noteId =>
+        set(s => {
+          const note = s.notes.find(n => n.id === noteId)
+          if (!note || !isActiveStatus(note.status)) return s
+          const group = s.notes
+            .filter(n => n.date === note.date && isActiveStatus(n.status))
+            .sort((a, b) => a.order - b.order)
+          const index = group.findIndex(n => n.id === noteId)
+          if (index === -1 || index >= group.length - 1) return s
+          const next = group[index + 1]
+          return {
+            notes: s.notes.map(n => {
+              if (n.id === note.id) return { ...n, order: next.order }
+              if (n.id === next.id) return { ...n, order: note.order }
+              return n
+            }),
+          }
+        }),
     }),
     {
       name: STORAGE_KEY,

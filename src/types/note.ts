@@ -17,6 +17,7 @@ interface BaseNote {
   createdAt: number
   date: string // 'YYYY-MM-DD' — 날짜 그룹 키
   tagId: string | null
+  order: number // 같은 date 그룹 내에서만 비교되는 진행 순서 (작을수록 상단)
 }
 
 export interface PomodoroNote extends BaseNote {
@@ -42,3 +43,8 @@ export interface ScheduleNote extends BaseNote {
 }
 
 export type Note = PomodoroNote | ScheduleNote
+
+// 노트 생성 시 전달하는 값 — order는 addNote가 내부에서 계산해 부여함
+export type NoteInput =
+  | Omit<PomodoroNote, 'order'>
+  | Omit<ScheduleNote, 'order'>
