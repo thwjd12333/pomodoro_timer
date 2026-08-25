@@ -7,6 +7,7 @@ import {
   DEFAULT_WORK_DURATION,
   TAG_COLORS,
 } from '../utils/constants'
+import { formatDuration } from '../utils/formatters'
 import {
   getDefaultScheduleTimes,
   getTodayDate,
@@ -77,13 +78,32 @@ const ToggleField = ({
   </div>
 )
 
-// 입력값이 숫자가 아니면 0으로 정규화 (빈 칸 등)
-const toNumber = (value: string): number => {
-  const n = Number(value)
-  return Number.isNaN(n) ? 0 : Math.max(0, n)
-}
+// 뽀모도로는 관습적으로 5분 단위를 쓰므로 스텝/최솟값도 5분으로 고정
+const DURATION_STEP = 5
+const MIN_DURATION = 5
 
-// 분 단위 값을 '시간 + 분' 두 입력으로 나눠 받음 — 세션 종료 팝업의 연장 세팅에서도 재사용
+const StepperButton = ({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-[13px] font-semibold border-0 cursor-pointer bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] active:scale-90 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
+  >
+    {label}
+  </button>
+)
+
+// 5분 단위 +/- 스테퍼 + 직접 입력(총 분 단위 숫자) 겸용 —
+// 편집 중엔 입력한 숫자 그대로, 포커스를 벗어나면 formatDuration으로 재포맷
+// (예: '90' 입력 → blur 시 '1시간 30분'). 세션 종료 팝업의 연장 세팅에서도 재사용
 export const DurationInput = ({
   label,
   minutes,
@@ -93,35 +113,45 @@ export const DurationInput = ({
   minutes: number
   onChange: (totalMinutes: number) => void
 }) => {
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
+  const [draft, setDraft] = useState<string | null>(null)
 
-  // 0은 '-' 플레이스홀더로 표시하고 포커스 시에는 숨겨 바로 입력 가능하게 함
-  const inputClass =
-    'w-6 bg-transparent text-[var(--text-primary)] text-[14px] font-semibold text-right outline-none border-0 min-w-0 placeholder:text-[var(--text-secondary)] focus:placeholder:text-transparent'
-  const unitClass = 'text-[11px] text-[var(--text-secondary)] shrink-0'
+  const commit = () => {
+    if (draft === null) return
+    const parsed = Number(draft)
+    if (draft !== '' && !Number.isNaN(parsed))
+      onChange(Math.max(MIN_DURATION, parsed))
+    setDraft(null)
+  }
 
   return (
-    <div className="flex-1 flex items-center gap-1 bg-[var(--bg-primary)] rounded-[12px] px-2.5 py-3 transition-shadow duration-150 focus-within:shadow-[inset_0_0_0_1.5px_var(--color-accent)]">
-      <span className="text-[12px] text-[var(--text-secondary)] shrink-0 mr-0.5">
+    <div className="flex-1 flex items-center gap-1 bg-[var(--bg-primary)] rounded-[12px] px-1.5 py-2">
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
         {label}
       </span>
-      <input
-        type="number"
-        value={hours === 0 ? '' : hours}
-        placeholder="-"
-        onChange={e => onChange(toNumber(e.target.value) * 60 + mins)}
-        className={inputClass}
-      />
-      <span className={unitClass}>시간</span>
-      <input
-        type="number"
-        value={mins === 0 ? '' : mins}
-        placeholder="-"
-        onChange={e => onChange(hours * 60 + toNumber(e.target.value))}
-        className={inputClass}
-      />
-      <span className={unitClass}>분</span>
+      {/* 남은 공간을 전부 차지해 '1시간 10분'처럼 길어져도 잘리지 않음 */}
+      <div className="flex-1 min-w-0 flex items-center justify-end gap-1">
+        <StepperButton
+          label="−"
+          onClick={() =>
+            onChange(Math.max(MIN_DURATION, minutes - DURATION_STEP))
+          }
+          disabled={minutes <= MIN_DURATION}
+        />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft ?? formatDuration(minutes)}
+          onFocus={() => setDraft(String(minutes))}
+          onChange={e => setDraft(e.target.value.replace(/[^0-9]/g, ''))}
+          onBlur={commit}
+          onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+          className="flex-1 min-w-0 bg-transparent text-center text-[10px] font-semibold text-[var(--text-primary)] outline-none border-0 tabular-nums"
+        />
+        <StepperButton
+          label="+"
+          onClick={() => onChange(minutes + DURATION_STEP)}
+        />
+      </div>
     </div>
   )
 }
