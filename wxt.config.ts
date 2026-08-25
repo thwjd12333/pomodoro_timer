@@ -1,11 +1,25 @@
+import { mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'wxt'
 import tailwindcss from '@tailwindcss/vite'
+
+// chrome-launcher가 직접 만들지 않으므로 미리 생성해둬야 함
+const chromiumProfile = fileURLToPath(
+  new URL('.wxt/chrome-data', import.meta.url),
+)
+mkdirSync(chromiumProfile, { recursive: true })
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   vite: () => ({
     plugins: [tailwindcss()],
   }),
+  // 지정하지 않으면 `npm run dev`마다 임시 프로필로 새 브라우저를 띄워
+  // chrome.storage 데이터가 재시작할 때마다 초기화됨 — 고정 프로필로 유지
+  webExt: {
+    chromiumProfile,
+    keepProfileChanges: true,
+  },
   manifest: {
     name: 'FocusCal',
     version: '0.0.1',

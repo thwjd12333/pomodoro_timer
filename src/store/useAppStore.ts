@@ -106,14 +106,18 @@ export const useAppStore = create<AppStore>()(
       timerState: IDLE_TIMER_STATE,
       pendingDecision: null,
 
-      addNote: note => {
-        const activeOrders = get()
-          .notes.filter(n => n.date === note.date && isActiveStatus(n.status))
-          .map(n => n.order)
-        const order =
-          activeOrders.length > 0 ? Math.max(...activeOrders) + 1 : 0
-        set(s => ({ notes: [...s.notes, { ...note, order }] }))
-      },
+      addNote: note =>
+        // 같은 날짜의 기존 활성 노트들을 한 칸씩 밀어내고 새 노트를 order 0으로 최상단에 배치
+        set(s => ({
+          notes: [
+            ...s.notes.map(n =>
+              n.date === note.date && isActiveStatus(n.status)
+                ? { ...n, order: n.order + 1 }
+                : n,
+            ),
+            { ...note, order: 0 },
+          ],
+        })),
 
       deleteNote: noteId =>
         set(s => ({
