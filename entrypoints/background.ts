@@ -60,13 +60,18 @@ const readAlarmContext = async (): Promise<TimerAlarmContext | undefined> => {
   return stored[ALARM_CONTEXT_KEY] as TimerAlarmContext | undefined
 }
 
-// 진행 중이면 endsAt 시점에 timer-end 알람을 예약하고, 아니면 정리한다.
-// 단, 만료가 이미 일어난 직후라면(팝업이 먼저 단계를 전환한 경우) 예약된 알람이
-// 한 번 발화하도록 남겨둔다 — handleTimerEnd가 발화 후 컨텍스트를 제거한다.
+// 진행 중이고 아직 만료 전이면 endsAt 시점에 timer-end 알람을 예약한다.
+// 이미 만료된 endsAt으로는 재예약하지 않는다 — 한 번 처리된 만료가 이후 저장 변경으로
+// 다시 알림을 쏘는 것을 막기 위함. 정상 케이스의 알람은 만료 전에 예약돼 그대로 발화한다.
 const syncAlarm = async (): Promise<void> => {
   const timer = (await readAppState())?.timerState
 
-  if (timer?.isRunning && timer.endsAt !== null && timer.noteId !== null) {
+  if (
+    timer?.isRunning &&
+    timer.endsAt !== null &&
+    timer.noteId !== null &&
+    timer.endsAt > Date.now()
+  ) {
     const context: TimerAlarmContext = {
       noteId: timer.noteId,
       phase: timer.phase,
@@ -78,7 +83,8 @@ const syncAlarm = async (): Promise<void> => {
   }
 
   const context = await readAlarmContext()
-  // 만료 임박(2초 이내)·경과 상태면 실제 종료로 보고 알람을 남겨 발화시킴
+  // 만료 임박(2초 이내)·경과했고 아직 처리 전인 컨텍스트가 있으면
+  // 팝업이 먼저 단계를 전환한 경우이므로 예약된 알람을 남겨 발화시킨다
   if (context && Date.now() >= context.endsAt - 2000) return
 
   await chrome.alarms.clear(TIMER_ALARM)

@@ -246,10 +246,6 @@ export const useAppStore = create<AppStore>()(
             ),
             timerState: IDLE_TIMER_STATE,
           }))
-          notify('scheduleEnd', note.title, {
-            os: note.notifyOnEnd,
-            sound: note.soundOnEnd,
-          })
           return
         }
 
@@ -273,14 +269,6 @@ export const useAppStore = create<AppStore>()(
           },
           pendingDecision: { noteId: note.id, kind },
         }))
-        notify(
-          kind === 'sessionEnd' ? 'sessionComplete' : 'breakEnd',
-          note.title,
-          {
-            os: note.notifyOnComplete,
-            sound: note.soundOnComplete,
-          },
-        )
       },
 
       // 집중 중 [완료] — 남은 시간과 무관하게 세션을 완료로 치고 휴식 시작

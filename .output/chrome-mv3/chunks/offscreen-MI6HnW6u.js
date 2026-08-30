@@ -1,0 +1,1 @@
+import{t as e}from"./soundUtils-CLptu5ZJ.js";var t=e=>typeof e==`object`&&!!e&&e.type===`play-sound`;chrome.runtime.onMessage.addListener(n=>{t(n)&&e(n.sound)});

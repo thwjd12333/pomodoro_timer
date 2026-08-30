@@ -37,12 +37,14 @@ Chrome은 최소화되거나 가려진 창의 JS 타이머를 강하게 지연/�
   → store가 timerState.endsAt 기록 (chrome.storage.sync)
   → storage.onChanged
   → background.syncAlarm()
-      - timerState.isRunning && endsAt 있음:
+      - timerState.isRunning && endsAt 있음 && endsAt 이 아직 미래:
           chrome.alarms.create('timer-end', { when: endsAt })
           chrome.storage.session 에 판별 컨텍스트 { noteId, phase, endsAt } 기록
+          (이미 만료된 endsAt 으로는 재예약하지 않음 — 처리된 만료가 이후 저장 변경으로
+           다시 알림을 쏘는 것을 방지)
       - 그 외인데 컨텍스트의 endsAt 이 이미 경과(또는 2초 이내로 임박):
-          아무것도 하지 않음 — 만료가 실제로 일어난 것이므로 예약된 알람이
-          한 번 발화하도록 남겨둔다 (handleTimerEnd 가 발화 후 컨텍스트를 제거)
+          아무것도 하지 않음 — 팝업이 먼저 단계를 전환한 경우이므로 만료 전에 예약된
+          알람이 한 번 발화하도록 남겨둔다 (handleTimerEnd 가 발화 후 컨텍스트를 제거)
       - 그 외(만료 전 일시정지/전환/삭제/idle):
           chrome.alarms.clear('timer-end')
           chrome.storage.session 컨텍스트 제거
@@ -66,7 +68,7 @@ endsAt 도달
 
 판별 컨텍스트를 `storage.session`에 따로 두는 이유: `chrome.alarms`는 페이로드를 실을 수 없고, 알람 발화 시점에는 팝업이 먼저 `advancePhase()`를 실행해 `timerState`를 비웠을 수 있다. 예약 시점의 `phase`를 별도 기록해야 이벤트 판별이 레이스와 무관하게 안정적이다.
 
-서비스 워커 재기동 시 `syncAlarm()`이 `storage.sync`의 `timerState`를 다시 읽어 알람과 컨텍스트를 복원한다(기존 `refreshBadge()` 호출 지점과 동일하게 startup에서 실행).
+서비스 워커 재기동 시 `syncAlarm()`이 `storage.sync`의 `timerState`를 다시 읽어 알람과 컨텍스트를 복원한다(기존 `refreshBadge()` 호출 지점과 동일하게 startup에서 실행). 단, `chrome.alarms`는 서비스 워커 재기동을 넘어 유지되므로 대부분의 경우 알람은 이미 살아 있다. 브라우저 재시작으로 알람이 유실되고 그 사이 `endsAt`이 지나버린 경우에는 재알림하지 않는다(기존 동작과 동일 — 팝업을 열 때 처리).
 
 ## 컴포넌트
 
@@ -80,8 +82,8 @@ endsAt 도달
 
 `src/background/badgeManager.ts`와 동일한 "백그라운드 전용 단일 책임 모듈" 패턴.
 
-- `resolvePhaseEndEvent(note, phase): NotifyEventType` — 순수 함수. `(type, phase)` → `'scheduleEnd' | 'sessionComplete' | 'breakEnd'` 매핑. 단위 검증 대상.
-- `notifyPhaseEnd(note, phase): Promise<void>` — 이벤트를 판별하고, 노트의 알림/사운드 설정(`notifyOnComplete`/`soundOnComplete`, `notifyOnEnd`/`soundOnEnd`)에 따라 OS 알림 발송 + offscreen 사운드 요청. 메시지·사운드 매핑은 기존 `src/utils/notifier.ts`의 `EVENTS` 테이블을 공유한다(중복 정의 금지 — 필요 시 테이블을 별도 모듈로 분리해 양쪽에서 import).
+- `resolvePhaseEndEvent(noteType, phase): NotifyEventType` — 순수 함수. `(noteType, phase)` → `'scheduleEnd' | 'sessionComplete' | 'breakEnd'` 매핑.
+- `notifyPhaseEnd(note, phase): Promise<void>` — 이벤트를 판별하고, 노트의 알림/사운드 설정(`notifyOnComplete`/`soundOnComplete`, `notifyOnEnd`/`soundOnEnd`)에 따라 OS 알림 발송 + offscreen 사운드 요청. 메시지·사운드 매핑은 `src/utils/notifyEvents.ts`의 `EVENTS` 테이블을 팝업 `notifier`와 공유한다.
 - `ensureOffscreenDocument()` — `chrome.offscreen.hasDocument()` 가드 후 `chrome.offscreen.createDocument({ url, reasons: ['AUDIO_PLAYBACK'], justification })`.
 
 ### `entrypoints/offscreen/` (신규)
