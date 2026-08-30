@@ -40,7 +40,10 @@ Chrome은 최소화되거나 가려진 창의 JS 타이머를 강하게 지연/�
       - timerState.isRunning && endsAt 있음:
           chrome.alarms.create('timer-end', { when: endsAt })
           chrome.storage.session 에 판별 컨텍스트 { noteId, phase, endsAt } 기록
-      - 그 외(일시정지/전환/삭제/idle):
+      - 그 외인데 컨텍스트의 endsAt 이 이미 경과(또는 2초 이내로 임박):
+          아무것도 하지 않음 — 만료가 실제로 일어난 것이므로 예약된 알람이
+          한 번 발화하도록 남겨둔다 (handleTimerEnd 가 발화 후 컨텍스트를 제거)
+      - 그 외(만료 전 일시정지/전환/삭제/idle):
           chrome.alarms.clear('timer-end')
           chrome.storage.session 컨텍스트 제거
 
@@ -105,7 +108,7 @@ WXT의 unlisted-page 엔트리포인트(`entrypoints/offscreen/index.html` + `ma
 
 ## 엣지 케이스
 
-- **팝업이 열려 있고 서비스 워커가 잠든 상태에서 만료**: 알람이 워커를 깨워 알림 발송. 팝업의 `useTimer`는 별도로 상태 전환 수행. 알림은 백그라운드만 발송하므로 중복 없음.
+- **팝업이 열려 있는 상태에서 만료**: `useTimer`가 `advancePhase()`로 상태를 전환하면 `isRunning`이 `false`가 되지만, `syncAlarm()`은 컨텍스트의 `endsAt`이 경과했음을 보고 알람을 지우지 않고 남겨둔다. 알람이 곧(보통 1초 내) 발화해 백그라운드가 알림을 1회 발송한다. 팝업 경로는 종료 `notify()`를 제거했으므로 중복 없음.
 - **만료 직후 서비스 워커 재기동**: `chrome.alarms`는 워커 재기동을 넘어 유지되며, 지난 `when`은 즉시 발화한다. 컨텍스트가 `storage.session`에서 사라졌다면 startup의 `syncAlarm()`이 `storage.sync` 상태로 재구성한다.
 - **사용자가 만료 전 일시정지**: `endsAt`이 `null`이 되어 `syncAlarm()`이 알람을 제거. 알림 없음.
 - **다른 노트로 타이머 전환**: `startTimer()`가 새 `endsAt`을 쓰므로 `syncAlarm()`이 알람을 새 시각으로 재예약.
