@@ -33,3 +33,6 @@ Always write code with the mindset of a **senior engineer with 20 years of exper
 ## Git
 - Use Conventional Commits format for all commit messages (`feat:`, `fix:`, `chore:`, `refactor:`, etc.).
 - Never commit or push without an explicit request from the user.
+
+## TaskObserver
+-  always use task-observer
