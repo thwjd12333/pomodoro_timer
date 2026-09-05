@@ -1,36 +1,72 @@
 @import 'tailwindcss';
 
 :root {
-  --color-accent: #6470d0;
-  --color-accent-hover: #5762c4;
-  --color-accent-active: #4a54b8;
+  --color-accent: #3a5fe0;
+  --color-accent-hover: #3151c7;
+  --color-accent-active: #2944ad;
+  --color-urgent: #e2543d;
+  --color-break: #2fb673;
+
+  --radius-hero: 24px;
+  --radius-card: 20px;
+  --radius-control: 13px;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 24px -12px rgba(0, 0, 0, 0.22);
+  --shadow-hero: 0 2px 4px rgba(0, 0, 0, 0.06), 0 20px 44px -16px rgba(0, 0, 0, 0.3);
+  --shadow-sheet: 0 -12px 36px -8px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 12px 36px -8px rgba(0, 0, 0, 0.32);
+
+  --blur-glass: saturate(180%) blur(20px);
 }
 
 :root[data-theme='dark'] {
-  --bg-primary: #1c1c1e;
-  --bg-card: #2c2c2e;
-  --bg-card-hover: #3a3a3c;
-  --bg-button: #0d0d0d;
-  --bg-button-hover: #1a1a1a;
-  --bg-button-active: #262626;
-  --text-primary: #ffffff;
-  --text-secondary: #8e8e93;
-  --border: #38383a;
+  --bg-primary: #101114;
+  --bg-wash: radial-gradient(
+    130% 70% at 50% -12%,
+    color-mix(in srgb, var(--color-accent) 22%, transparent),
+    transparent 62%
+  );
+  --bg-card: color-mix(in srgb, white 7%, transparent);
+  --bg-card-hover: color-mix(in srgb, white 11%, transparent);
+  --bg-surface: color-mix(in srgb, white 5%, transparent);
+  --bg-button: var(--color-accent);
+  --bg-button-hover: var(--color-accent-hover);
+  --bg-button-active: var(--color-accent-active);
+  --text-primary: #f5f6f8;
+  --text-secondary: #999ca6;
+  --border: color-mix(in srgb, white 10%, transparent);
+  --color-accent-ink: #9db0ff;
+  --scrim: rgba(0, 0, 0, 0.55);
 }
 
 :root[data-theme='light'] {
-  --bg-primary: #f2f2f7;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f0f0f5;
-  --bg-button: #1c1c1e;
-  --bg-button-hover: #2c2c2e;
-  --bg-button-active: #3a3a3c;
-  --text-primary: #000000;
-  --text-secondary: #6c6c70;
-  --border: #dcdce0;
+  --bg-primary: #eef0f6;
+  --bg-wash: radial-gradient(
+    130% 70% at 50% -12%,
+    color-mix(in srgb, var(--color-accent) 15%, transparent),
+    transparent 62%
+  );
+  --bg-card: color-mix(in srgb, white 68%, transparent);
+  --bg-card-hover: color-mix(in srgb, white 84%, transparent);
+  --bg-surface: rgba(20, 21, 26, 0.04);
+  --bg-button: var(--color-accent);
+  --bg-button-hover: var(--color-accent-hover);
+  --bg-button-active: var(--color-accent-active);
+  --text-primary: #14151a;
+  --text-secondary: #6b6f7c;
+  --border: rgba(20, 21, 26, 0.08);
+  --color-accent-ink: var(--color-accent);
+  --scrim: rgba(15, 16, 20, 0.4);
 }
 
-/* 바텀시트 등장 애니메이션 */
+/* 유리질 표면 공용 배경 — 카드·히어로 위젯·시트·다이얼로그가 공유.
+   backdrop-filter는 빌드 파이프라인이 접두사 없는 선언을 지워버리는 문제가 있어
+   컴포넌트의 인라인 style(glassBlur, src/utils/colorUtils.ts)로 별도 적용함 */
+.glass-surface {
+  background: var(--bg-card);
+}
+
+/* 바텀시트·다이얼로그 등장 애니메이션 */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -79,6 +115,17 @@ body {
     -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
     sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-image: var(--bg-wash);
+  background-repeat: no-repeat;
+}
+
+/* 텍스트 선택·포커스 링도 팔레트를 따름 */
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 #root {

@@ -1,4 +1,10 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import type { NoteType } from '../types/note'
 import { useAppStore } from '../store/useAppStore'
 import {
@@ -7,6 +13,7 @@ import {
   DEFAULT_WORK_DURATION,
   TAG_COLORS,
 } from '../utils/constants'
+import { glassBlur } from '../utils/colorUtils'
 import { formatDuration } from '../utils/formatters'
 import {
   getDefaultScheduleTimes,
@@ -24,15 +31,17 @@ const PRESETS: [number, number, string][] = [
   [50, 10, '50분 / 10분'],
 ]
 
-// 선택 상태 칩 공통 스타일 — 틴트 배경 + 컬러 링 (프리셋·태그 공용)
+// 선택 상태 칩 공통 스타일 — 틴트 배경 + 컬러 링 (프리셋·태그 공용).
+// 글자색은 항상 중립(text-primary)으로 두고 색은 배경 틴트·링에만 써서
+// 다크모드에서도 대비가 항상 보장되게 함
 const chipStyle = (
   selected: boolean,
   color = 'var(--color-accent)',
 ): CSSProperties =>
   selected
     ? {
-        backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`,
-        color,
+        backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+        color: 'var(--text-primary)',
         boxShadow: `inset 0 0 0 1.5px ${color}`,
       }
     : { backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }
@@ -124,7 +133,7 @@ export const DurationInput = ({
   }
 
   return (
-    <div className="flex-1 flex items-center gap-1 bg-[var(--bg-primary)] rounded-[12px] px-1.5 py-2">
+    <div className="flex-1 min-w-0 flex items-center gap-1 bg-[var(--bg-primary)] rounded-[12px] px-1.5 py-2">
       <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
         {label}
       </span>
@@ -156,20 +165,138 @@ export const DurationInput = ({
   )
 }
 
-const TimeInput = ({
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
+const WHEEL_ITEM_HEIGHT = 32
+const WHEEL_HEIGHT = WHEEL_ITEM_HEIGHT * 3 // 위/가운데(선택)/아래 3줄만 보여줌
+
+// 분 값을 휠에 있는 가장 가까운 5분 단위로 보정 — 저장된 값 자체는 바꾸지 않고 표시용으로만 사용
+const snapMinute = (m: number): number =>
+  MINUTES.reduce((closest, candidate) =>
+    Math.abs(candidate - m) < Math.abs(closest - m) ? candidate : closest,
+  )
+
+// 스크롤/드래그로 값을 고르는 휠 한 칸 — 시·분 선택 공용
+const WheelColumn = ({
+  options,
   value,
   onChange,
+  ariaLabel,
 }: {
+  options: number[]
+  value: number
+  onChange: (v: number) => void
+  ariaLabel: string
+}) => {
+  const listRef = useRef<HTMLDivElement>(null)
+  const commitTimer = useRef<number | undefined>(undefined)
+  const index = Math.max(0, options.indexOf(value))
+
+  // 값이 외부에서 바뀌면(다른 시간으로 전환 등) 그 위치로 스크롤 위치를 맞춤
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const target = index * WHEEL_ITEM_HEIGHT
+    if (Math.abs(el.scrollTop - target) > 1) el.scrollTop = target
+  }, [index])
+
+  const commitFromScroll = () => {
+    const el = listRef.current
+    if (!el) return
+    const nextIndex = Math.min(
+      options.length - 1,
+      Math.max(0, Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT)),
+    )
+    if (options[nextIndex] !== value) onChange(options[nextIndex])
+  }
+
+  const step = (delta: number) => {
+    const next = Math.min(options.length - 1, Math.max(0, index + delta))
+    onChange(options[next])
+  }
+
+  return (
+    <div className="relative" style={{ height: WHEEL_HEIGHT }}>
+      {/* 가운데(선택) 줄 강조 — 스크롤과 무관한 고정 오버레이 */}
+      <div
+        className="pointer-events-none absolute inset-x-0 rounded-[8px] bg-[var(--bg-card-hover)]"
+        style={{ top: WHEEL_ITEM_HEIGHT, height: WHEEL_ITEM_HEIGHT }}
+      />
+      <div
+        ref={listRef}
+        role="listbox"
+        aria-label={ariaLabel}
+        tabIndex={0}
+        onScroll={() => {
+          window.clearTimeout(commitTimer.current)
+          commitTimer.current = window.setTimeout(commitFromScroll, 100)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            step(-1)
+          }
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            step(1)
+          }
+        }}
+        className="scroll-area relative h-full w-11 overflow-y-auto outline-none [scroll-snap-type:y_mandatory]"
+      >
+        <div style={{ height: WHEEL_ITEM_HEIGHT }} />
+        {options.map(opt => (
+          <div
+            key={opt}
+            role="option"
+            aria-selected={opt === value}
+            onClick={() => onChange(opt)}
+            className="flex cursor-pointer items-center justify-center tabular-nums transition-[color,opacity,font-size] duration-150 [scroll-snap-align:center]"
+            style={{
+              height: WHEEL_ITEM_HEIGHT,
+              fontSize: opt === value ? 16 : 13,
+              fontWeight: opt === value ? 700 : 500,
+              color: opt === value ? 'var(--text-primary)' : 'var(--text-secondary)',
+              opacity: opt === value ? 1 : 0.55,
+            }}
+          >
+            {pad2(opt)}
+          </div>
+        ))}
+        <div style={{ height: WHEEL_ITEM_HEIGHT }} />
+      </div>
+    </div>
+  )
+}
+
+// 시작/종료 시각을 여는 칩 — 탭하면 바로 아래에 휠 피커가 펼쳐짐
+const TimeChip = ({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string
   value: string
-  onChange: (v: string) => void
+  active: boolean
+  onClick: () => void
 }) => (
-  <div className="flex flex-1 items-center gap-1.5 bg-[var(--bg-primary)] rounded-[12px] px-3 py-[9px] transition-shadow duration-150 focus-within:shadow-[inset_0_0_0_1.5px_var(--color-accent)]">
-    <input
-      type="time"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="flex-1 min-w-0 bg-transparent text-[var(--text-primary)] text-[13px] font-semibold outline-none border-0"
-    />
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[12px] bg-[var(--bg-primary)] px-3 py-[9px] text-left transition-shadow duration-150"
+    style={
+      active
+        ? { boxShadow: 'inset 0 0 0 1.5px var(--color-accent)' }
+        : undefined
+    }
+  >
+    <span className="shrink-0 text-[11px] text-[var(--text-secondary)]">
+      {label}
+    </span>
+    <span className="min-w-0 flex-1 truncate tabular-nums text-[13px] font-semibold text-[var(--text-primary)]">
+      {value}
+    </span>
     <svg
       className="w-[14px] h-[14px] shrink-0 text-[var(--text-secondary)]"
       fill="none"
@@ -183,8 +310,38 @@ const TimeInput = ({
         d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
       />
     </svg>
-  </div>
+  </button>
 )
+
+// 칩 아래 펼쳐지는 시:분 휠 페어
+const TimeWheelPanel = ({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) => {
+  const [hour, minute] = value.split(':').map(Number)
+  return (
+    <div className="mt-2 flex items-center justify-center gap-1 rounded-[12px] bg-[var(--bg-primary)] px-3 py-2">
+      <WheelColumn
+        options={HOURS}
+        value={hour}
+        onChange={nextHour => onChange(`${pad2(nextHour)}:${pad2(minute)}`)}
+        ariaLabel="시"
+      />
+      <span className="pb-px text-[15px] font-bold text-[var(--text-secondary)]">
+        :
+      </span>
+      <WheelColumn
+        options={MINUTES}
+        value={snapMinute(minute)}
+        onChange={nextMinute => onChange(`${pad2(hour)}:${pad2(nextMinute)}`)}
+        ariaLabel="분"
+      />
+    </div>
+  )
+}
 
 // 열릴 때마다 새로 마운트되어 폼이 항상 초기 상태로 시작됨 (일정 기본 시간도 현재 시각 기준)
 const SheetContent = ({ onClose }: { onClose: () => void }) => {
@@ -198,6 +355,9 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
     () => getDefaultScheduleTimes().start,
   )
   const [endTime, setEndTime] = useState(() => getDefaultScheduleTimes().end)
+  const [openTimeField, setOpenTimeField] = useState<'start' | 'end' | null>(
+    null,
+  )
   const [notifyOnStart, setNotifyOnStart] = useState(true)
   const [notifyOnEnd, setNotifyOnEnd] = useState(true)
   const [notifyOnComplete, setNotifyOnComplete] = useState(true)
@@ -261,11 +421,14 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="fixed inset-0 z-10 flex flex-col justify-end">
       <div
-        className="absolute inset-0 bg-black/50 animate-[fade-in_0.2s_ease-out]"
+        className="absolute inset-0 bg-[var(--scrim)] animate-[fade-in_0.2s_ease-out]"
         onClick={onClose}
       />
 
-      <div className="relative z-20 bg-[var(--bg-card)] rounded-t-[24px] px-5 pt-4 pb-6 shadow-[0_-8px_32px_rgba(0,0,0,0.24)] animate-[slide-up_0.32s_cubic-bezier(0.32,0.72,0,1)]">
+      <div
+        className="glass-surface relative z-20 rounded-t-[var(--radius-hero)] border-t border-x border-[var(--border)] px-5 pt-4 pb-6 animate-[slide-up_0.32s_cubic-bezier(0.32,0.72,0,1)]"
+        style={{ ...glassBlur, boxShadow: 'var(--shadow-sheet)' }}
+      >
         <div className="w-9 h-1 bg-[var(--border)] rounded-full mx-auto mb-5" />
 
         {/* 타입 탭 */}
@@ -280,7 +443,7 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
                   ? {
                       backgroundColor: 'var(--color-accent)',
                       color: '#fff',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.16)',
+                      boxShadow: 'var(--shadow-card)',
                     }
                   : {
                       backgroundColor: 'transparent',
@@ -353,10 +516,34 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
           {type === 'schedule' && (
             <div>
               <SectionLabel>시간</SectionLabel>
-              {/* 시작 / 종료 시간 */}
-              <div className="flex gap-2 mb-2">
-                <TimeInput value={startTime} onChange={setStartTime} />
-                <TimeInput value={endTime} onChange={setEndTime} />
+              {/* 시작 / 종료 시간 — 칩을 탭하면 아래에 휠 피커가 펼쳐짐 */}
+              <div className="mb-2">
+                <div className="flex gap-2">
+                  <TimeChip
+                    label="시작"
+                    value={startTime}
+                    active={openTimeField === 'start'}
+                    onClick={() =>
+                      setOpenTimeField(f => (f === 'start' ? null : 'start'))
+                    }
+                  />
+                  <TimeChip
+                    label="종료"
+                    value={endTime}
+                    active={openTimeField === 'end'}
+                    onClick={() =>
+                      setOpenTimeField(f => (f === 'end' ? null : 'end'))
+                    }
+                  />
+                </div>
+                {openTimeField && (
+                  <TimeWheelPanel
+                    value={openTimeField === 'start' ? startTime : endTime}
+                    onChange={v =>
+                      openTimeField === 'start' ? setStartTime(v) : setEndTime(v)
+                    }
+                  />
+                )}
               </div>
               {/* 시작·종료 알림 on/off */}
               <div className="flex gap-2">
@@ -396,7 +583,7 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
         <button
           onClick={handleSave}
           disabled={!canSave}
-          className="w-full py-[14px] rounded-[14px] text-[14px] font-semibold border-0 cursor-pointer text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-active)] active:scale-[0.99] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-accent)] disabled:active:scale-100"
+          className="w-full py-[14px] rounded-full text-[14px] font-semibold border-0 cursor-pointer text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-active)] active:scale-[0.99] transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-accent)] disabled:active:scale-100"
         >
           저장하기
         </button>
@@ -406,10 +593,13 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
       {alertMessage && (
         <div className="fixed inset-0 z-30 flex items-center justify-center px-8">
           <div
-            className="absolute inset-0 bg-black/50 animate-[fade-in_0.15s_ease-out]"
+            className="absolute inset-0 bg-[var(--scrim)] animate-[fade-in_0.15s_ease-out]"
             onClick={() => setAlertMessage(null)}
           />
-          <div className="relative z-10 w-full bg-[var(--bg-card)] rounded-[18px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] animate-[fade-in_0.15s_ease-out]">
+          <div
+            className="glass-surface relative z-10 w-full rounded-[var(--radius-card)] border border-[var(--border)] p-5 animate-[fade-in_0.15s_ease-out]"
+            style={{ ...glassBlur, boxShadow: 'var(--shadow-pop)' }}
+          >
             <p className="text-[15px] font-semibold text-[var(--text-primary)]">
               일정을 만들 수 없어요
             </p>
@@ -418,7 +608,7 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
             </p>
             <button
               onClick={() => setAlertMessage(null)}
-              className="w-full mt-5 py-2.5 rounded-[12px] text-[13px] font-semibold cursor-pointer border-0 text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:scale-[0.98] transition-all duration-150"
+              className="w-full mt-5 py-2.5 rounded-full text-[13px] font-semibold cursor-pointer border-0 text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:scale-[0.98] transition-transform duration-150"
             >
               확인
             </button>

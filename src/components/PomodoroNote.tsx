@@ -7,7 +7,8 @@ import type {
 import type { TimerState } from '../types/timer'
 import { useAppStore } from '../store/useAppStore'
 import { useTimer } from '../hooks/useTimer'
-import { DEFAULT_TAGS, PHASE_COLORS, TAG_COLORS } from '../utils/constants'
+import { DEFAULT_TAGS, TAG_COLORS } from '../utils/constants'
+import { glassBlur, ringColorFor } from '../utils/colorUtils'
 import {
   formatDateHeading,
   formatDuration,
@@ -17,7 +18,12 @@ import { getTodayDate } from '../utils/timeUtils'
 import NoteBottomSheet from './NoteBottomSheet'
 import ScheduleNoteCard from './ScheduleNote'
 import SessionEndPopup from './SessionEndPopup'
-import { ActionButton, FinishedNoteRow, NoteCardFrame } from './NoteCardParts'
+import {
+  ActionButton,
+  FinishedNoteRow,
+  NoteCardFrame,
+  NoteHero,
+} from './NoteCardParts'
 
 // 독립 창으로 열렸는지 여부 — 창 안에서는 '창으로 열기' 버튼을 숨김
 const isWindowMode =
@@ -72,10 +78,13 @@ const DeleteConfirmDialog = ({
 }) => (
   <div className="fixed inset-0 z-30 flex items-center justify-center px-8">
     <div
-      className="absolute inset-0 bg-black/50 animate-[fade-in_0.15s_ease-out]"
+      className="absolute inset-0 bg-[var(--scrim)] animate-[fade-in_0.15s_ease-out]"
       onClick={onCancel}
     />
-    <div className="relative z-10 w-full bg-[var(--bg-card)] rounded-[18px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] animate-[fade-in_0.15s_ease-out]">
+    <div
+      className="glass-surface relative z-10 w-full rounded-[var(--radius-card)] border border-[var(--border)] p-5 animate-[fade-in_0.15s_ease-out]"
+      style={{ ...glassBlur, boxShadow: 'var(--shadow-pop)' }}
+    >
       <p className="text-[15px] font-semibold text-[var(--text-primary)]">
         일정을 삭제할까요?
       </p>
@@ -85,13 +94,13 @@ const DeleteConfirmDialog = ({
       <div className="flex gap-2 mt-5">
         <button
           onClick={onCancel}
-          className="flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold cursor-pointer bg-transparent text-[var(--text-primary)] border border-solid border-[var(--border)] hover:bg-[var(--bg-card-hover)] active:scale-[0.98] transition-all duration-150"
+          className="flex-1 py-2.5 rounded-full text-[13px] font-semibold cursor-pointer bg-transparent text-[var(--text-primary)] border border-solid border-[var(--border)] hover:bg-[var(--bg-card-hover)] active:scale-[0.98] transition-transform duration-150"
         >
           취소
         </button>
         <button
           onClick={onConfirm}
-          className="flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold cursor-pointer border-0 text-white bg-[#B74A4A] hover:bg-[#a54242] active:scale-[0.98] transition-all duration-150"
+          className="flex-1 py-2.5 rounded-full text-[13px] font-semibold cursor-pointer border-0 text-white bg-[var(--color-urgent)] hover:brightness-95 active:scale-[0.98] transition-transform duration-150"
         >
           삭제
         </button>
@@ -137,6 +146,56 @@ const PomodoroCard = ({
         ? suspended.remaining / suspended.total
         : 1
   const onBreak = (isActive ? timer.phase : suspended?.phase) === 'break'
+  const tagColor = tag ? TAG_COLORS[tag.color] : undefined
+
+  const actions = (
+    <>
+      {note.status === 'idle' && (
+        <ActionButton label="시작" onClick={() => startTimer(note.id)} />
+      )}
+      {note.status === 'running' && (
+        <ActionButton label="일시정지" onClick={pauseTimer} />
+      )}
+      {note.status === 'paused' && (
+        <ActionButton label="재개" onClick={() => resumeNote(note.id)} />
+      )}
+      {/* 밀려나 일시정지된 노트는 [재개]만 — 완료 동작은 재개 후에 */}
+      {(note.status === 'running' ||
+        (note.status === 'paused' && isActive)) && (
+        // 집중 중 완료: 세션 완료로 치고 휴식 시작, 휴식 중 그만하기: 노트 완료 처리
+        <ActionButton
+          label={onBreak ? '그만하기' : '완료'}
+          primary
+          onClick={() => (onBreak ? completeNote(note.id) : completeSession())}
+        />
+      )}
+    </>
+  )
+
+  // 지금 타이머를 쥐고 있는 노트만 히어로 위젯 — 나머지(대기·밀려난 일시정지)는 압축 카드
+  if (isActive)
+    return (
+      <NoteHero
+        type="pomodoro"
+        status={note.status}
+        title={note.title}
+        subtitle={`${formatDuration(note.workDuration)} 집중 · ${formatDuration(note.breakDuration)} 휴식`}
+        display={formatTime(remaining)}
+        progress={progress}
+        ringColor={ringColorFor(progress, timer.phase)}
+        phaseLabel={
+          note.status === 'paused' ? '일시정지' : onBreak ? '휴식 중' : '집중 중'
+        }
+        phaseColor={onBreak ? 'var(--color-break)' : 'var(--color-accent)'}
+        actions={actions}
+        tagColor={tagColor}
+        isFirst={isFirst}
+        isLast={isLast}
+        onMoveUp={() => moveNoteUp(note.id)}
+        onMoveDown={() => moveNoteDown(note.id)}
+        onDeleteRequest={onDeleteRequest}
+      />
+    )
 
   return (
     <NoteCardFrame
@@ -145,43 +204,10 @@ const PomodoroCard = ({
       title={note.title}
       subtitle={`${formatDuration(note.workDuration)} 집중 · ${formatDuration(note.breakDuration)} 휴식`}
       display={formatTime(remaining)}
+      showTimer={!!suspended}
       progress={progress}
-      infoLeft={
-        isActive
-          ? onBreak
-            ? '휴식 중'
-            : '집중 중'
-          : suspended
-            ? '일시정지'
-            : ''
-      }
-      actions={
-        <>
-          {note.status === 'idle' && (
-            <ActionButton label="시작" onClick={() => startTimer(note.id)} />
-          )}
-          {note.status === 'running' && (
-            <ActionButton label="일시정지" onClick={pauseTimer} />
-          )}
-          {note.status === 'paused' && (
-            <ActionButton label="재개" onClick={() => resumeNote(note.id)} />
-          )}
-          {/* 밀려나 일시정지된 노트는 [재개]만 — 완료 동작은 재개 후에 */}
-          {(note.status === 'running' ||
-            (note.status === 'paused' && isActive)) && (
-            // 집중 중 완료: 세션 완료로 치고 휴식 시작, 휴식 중 그만하기: 노트 완료 처리
-            <ActionButton
-              label={onBreak ? '그만하기' : '완료'}
-              primary
-              onClick={() =>
-                onBreak ? completeNote(note.id) : completeSession()
-              }
-            />
-          )}
-        </>
-      }
-      tagColor={tag ? TAG_COLORS[tag.color] : undefined}
-      ringColor={isActive ? PHASE_COLORS[timer.phase] : undefined}
+      actions={actions}
+      tagColor={tagColor}
       isFirst={isFirst}
       isLast={isLast}
       onMoveUp={() => moveNoteUp(note.id)}
@@ -214,17 +240,22 @@ const PomodoroNote = () => {
   }
   const dates = [...notesByDate.keys()].sort((a, b) => b.localeCompare(a))
 
+  const isEmpty = notes.length === 0
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
-      <header className="flex items-center justify-between px-4 py-3 shrink-0">
-        <h1 className="text-[20px] font-bold tracking-[-0.4px] text-[var(--text-primary)]">
+      <header
+        className="glass-surface flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--border)]"
+        style={glassBlur}
+      >
+        <h1 className="text-[19px] font-bold tracking-[-0.4px] text-[var(--text-primary)]">
           FocusCal
         </h1>
         <div className="flex items-center gap-1.5">
           {!isWindowMode && (
             <button
               onClick={openStandaloneWindow}
-              className="w-7 h-7 rounded-full flex items-center justify-center border-0 outline-none cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] active:scale-95"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-0 outline-none cursor-pointer transition-transform duration-150 bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] active:scale-95"
               aria-label="창으로 열기"
               title="창으로 열기 — 다른 곳을 클릭해도 닫히지 않아요"
             >
@@ -241,7 +272,7 @@ const PomodoroNote = () => {
           )}
           <button
             onClick={() => setIsSheetOpen(true)}
-            className="w-7 h-7 rounded-full flex items-center justify-center border-0 outline-none cursor-pointer transition-all duration-150 bg-[var(--bg-button)] text-white hover:bg-[var(--bg-button-hover)] active:bg-[var(--bg-button-active)] active:scale-95"
+            className="w-7 h-7 rounded-full flex items-center justify-center border-0 outline-none cursor-pointer transition-transform duration-150 bg-[var(--bg-button)] text-white hover:bg-[var(--bg-button-hover)] active:bg-[var(--bg-button-active)] active:scale-95"
             aria-label="일정 추가"
           >
             <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
@@ -255,7 +286,38 @@ const PomodoroNote = () => {
           </button>
         </div>
       </header>
-      <div className="h-px bg-[var(--border)] shrink-0" />
+      {isEmpty && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-8 text-center">
+          <div
+            className="glass-surface w-14 h-14 rounded-full flex items-center justify-center border border-[var(--border)]"
+            style={{ ...glassBlur, boxShadow: 'var(--shadow-card)' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="8.5"
+                stroke="var(--text-secondary)"
+                strokeWidth="1.6"
+              />
+              <path
+                d="M12 8v4l2.5 2.5"
+                stroke="var(--text-secondary)"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <p className="text-[13px] font-medium text-[var(--text-primary)]">
+            아직 노트가 없어요
+          </p>
+          <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+            우측 상단 + 버튼으로 뽀모도로나 일정을 추가해 보세요.
+          </p>
+        </div>
+      )}
+      {!isEmpty && (
       <div className="scroll-area flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
         {dates.map(date => {
           const dateNotes = notesByDate.get(date) ?? []
@@ -294,6 +356,7 @@ const PomodoroNote = () => {
           )
         })}
       </div>
+      )}
 
       <NoteBottomSheet
         isOpen={isSheetOpen}

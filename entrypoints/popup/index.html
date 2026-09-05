@@ -4,17 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FocusCal</title>
-    <script>
-      ;(function () {
-        const prefersDark = window.matchMedia(
-          '(prefers-color-scheme: dark)',
-        ).matches
-        document.documentElement.setAttribute(
-          'data-theme',
-          prefersDark ? 'dark' : 'light',
-        )
-      })()
-    </script>
+    <!-- MV3 기본 CSP(script-src 'self')는 인라인 스크립트를 차단하므로
+         테마 즉시 적용용 FOUC 방지 스크립트를 외부 파일로 분리함 -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -5,6 +5,7 @@ import {
   useAppStore,
   type PendingDecision,
 } from '../store/useAppStore'
+import { glassBlur } from '../utils/colorUtils'
 import { DurationInput } from './NoteBottomSheet'
 
 type Step = 'confirm' | 'choose' | 'extend' | 'breakEnd'
@@ -18,8 +19,8 @@ const STEP_TITLE: Record<Step, string> = {
 
 const buttonClass = (variant: 'outline' | 'accent') =>
   variant === 'accent'
-    ? 'flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold cursor-pointer border-0 text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed'
-    : 'flex-1 py-2.5 rounded-[12px] text-[13px] font-semibold cursor-pointer bg-transparent text-[var(--text-primary)] border border-solid border-[var(--border)] hover:bg-[var(--bg-card-hover)] active:scale-[0.98] transition-all duration-150'
+    ? 'flex-1 py-2.5 rounded-full text-[13px] font-semibold cursor-pointer border-0 text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] active:scale-[0.98] transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed'
+    : 'flex-1 py-2.5 rounded-full text-[13px] font-semibold cursor-pointer bg-transparent text-[var(--text-primary)] border border-solid border-[var(--border)] hover:bg-[var(--bg-card-hover)] active:scale-[0.98] transition-transform duration-150'
 
 // 결정 플로우 — 집중 종료: 완료 확인 → 연장/넘기기 → 연장 세팅, 휴식 종료: 다음 세션 진행 여부
 const PopupContent = ({
@@ -44,8 +45,11 @@ const PopupContent = ({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center px-8">
-      <div className="absolute inset-0 bg-black/50 animate-[fade-in_0.15s_ease-out]" />
-      <div className="relative z-10 w-full bg-[var(--bg-card)] rounded-[18px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] animate-[fade-in_0.15s_ease-out]">
+      <div className="absolute inset-0 bg-[var(--scrim)] animate-[fade-in_0.15s_ease-out]" />
+      <div
+        className="glass-surface relative z-10 w-full rounded-[var(--radius-card)] border border-[var(--border)] p-5 animate-[fade-in_0.15s_ease-out]"
+        style={{ ...glassBlur, boxShadow: 'var(--shadow-pop)' }}
+      >
         <p className="text-[15px] font-semibold text-[var(--text-primary)]">
           {STEP_TITLE[step]}
         </p>
