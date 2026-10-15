@@ -10,3 +10,13 @@ dist-zip
 
 # 내부 작업 문서
 docs
+
+# AI 도구 설정·작업 문서
+.claude
+.serena
+.impeccable
+CLAUDE.md
+DESIGN.md
+PRODUCT.md
+pomodoro_timer.md
+FOCUSCAL_DESIGN.html

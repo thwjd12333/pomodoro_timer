@@ -10,7 +10,8 @@
     "lint": "eslint src entrypoints",
     "lint:fix": "eslint src entrypoints --fix",
     "format": "prettier --write src entrypoints",
-    "format:check": "prettier --check src entrypoints"
+    "format:check": "prettier --check src entrypoints",
+    "postinstall": "wxt prepare"
   },
   "dependencies": {
     "react": "^18.3.1",
