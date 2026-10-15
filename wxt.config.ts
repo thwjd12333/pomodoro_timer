@@ -21,7 +21,7 @@ export default defineConfig({
     keepProfileChanges: true,
   },
   manifest: {
-    name: 'FocusCal',
+    name: 'PomodoroTimer',
     version: '0.0.1',
     description:
       '뽀모도로 타이머 + 일정 타이머를 스티키노트 형태로 관리하는 Chrome Extension',

@@ -1,5 +1,5 @@
 ---
-name: FocusCal
+name: PomodoroTimer
 description: 뽀모도로 + 일정 타이머를 스티키노트 형태로 관리하는 Chrome 확장 팝업의 글래스 컨트롤센터
 colors:
   cobalt-accent: "#3a5fe0"
@@ -86,13 +86,13 @@ components:
     padding: "16px 20px"
 ---
 
-# Design System: FocusCal
+# Design System: PomodoroTimer
 
 ## Overview
 
 **Creative North Star: "The Glass Control Center"**
 
-FocusCal's popup is a small frosted-glass instrument panel: one glass hero widget states what's running right now, and everything else recedes into a compressed, scannable list of glass cards. The world is deliberately quiet — a single graphite/white surface language, one cobalt accent, and a continuous (never stepped) color language for urgency — because the product's job is a 1-second glance while working, not a destination to linger in. Nothing here shouts; the hero widget is the only thing allowed to be large, and it earns that size by being the one note currently holding the timer.
+PomodoroTimer's popup is a small frosted-glass instrument panel: one glass hero widget states what's running right now, and everything else recedes into a compressed, scannable list of glass cards. The world is deliberately quiet — a single graphite/white surface language, one cobalt accent, and a continuous (never stepped) color language for urgency — because the product's job is a 1-second glance while working, not a destination to linger in. Nothing here shouts; the hero widget is the only thing allowed to be large, and it earns that size by being the one note currently holding the timer.
 
 Two disciplines were inherited from the direction contract's near-miss challenger and are now load-bearing: state is never color-only (every dot pairs with a neutral-text label), and action buttons are differentiated by shape as well as color (filled pill for the confirming action, outlined pill for the secondary one). Depth comes entirely from translucency and soft, deeply-blurred shadows, never from hard offsets or borders alone — this is a frosted-glass world, and its blur is structural, not decorative.
 
@@ -135,7 +135,7 @@ A near-monochrome graphite/white/ink field carries one cobalt accent; semantic c
 **Character:** A single system-native family carries every role; hierarchy comes entirely from size, weight, and tabular-numeral treatment on timers, not from a second typeface.
 
 ### Hierarchy
-- **Headline** (700, 19px, tight `-0.4px` tracking): the "FocusCal" wordmark in the header — the only headline-scale text in the surface.
+- **Headline** (700, 19px, tight `-0.4px` tracking): the "PomodoroTimer" wordmark in the header — the only headline-scale text in the surface.
 - **Numeral** (700, 22px in compact cards / 16px inside the hero ring, tabular-nums, `-0.3px`–`-0.4px` tracking): the countdown display. Always tabular so digits don't shift width as they tick.
 - **Title** (600, 15–16px): note titles in cards and the hero widget.
 - **Body** (400–500, 12–13px): subtitles, dialog copy, form field text.

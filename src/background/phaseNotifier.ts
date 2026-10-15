@@ -5,7 +5,7 @@ import { EVENTS, type NotifyEventType } from '../utils/notifyEvents'
 const OFFSCREEN_URL = 'offscreen.html'
 
 // (노트 타입, 단계) → 종료 이벤트. 일정 노트는 단계 구분 없이 종료로 처리
-export const resolvePhaseEndEvent = (
+const resolvePhaseEndEvent = (
   noteType: Note['type'],
   phase: TimerPhase,
 ): NotifyEventType =>

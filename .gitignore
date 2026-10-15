@@ -2,4 +2,11 @@ node_modules
 dist
 dist-zip
 *.local
-.wxt/chrome-data
+.DS_Store
+
+# WXT 빌드/생성물
+.output
+.wxt
+
+# 내부 작업 문서
+docs

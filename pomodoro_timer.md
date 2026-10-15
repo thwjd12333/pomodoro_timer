@@ -1,4 +1,4 @@
-# FocusCal — Chrome Extension Project Spec
+# PomodoroTimer — Chrome Extension Project Spec
 
 ## 개요
 뽀모도로 타이머 + 일정 타이머를 하나의 화면에서 스티키노트 형태로 관리하는 Chrome Extension.
@@ -439,7 +439,7 @@ body {
 ### 메인 화면 레이아웃
 ```
 ┌──────────────────────────────────┐
-│ FocusCal          [🌙] [+]       │  ← 다크모드 토글 + 새 노트 추가
+│ PomodoroTimer          [🌙] [+]       │  ← 다크모드 토글 + 새 노트 추가
 ├──────────────────────────────────┤
 │ [전체] [업무] [개인] [공부] ...  │  ← 태그 필터 바 (가로 스크롤)
 ├──────────────────────────────────┤
@@ -811,6 +811,6 @@ chrome.windows.create({
 
 | 단축키 | 동작 |
 |--------|------|
-| `Alt+F` | FocusCal 팝업 열기 |
+| `Alt+F` | PomodoroTimer 팝업 열기 |
 | `Alt+S` | 현재 타이머 시작/일시정지 |
 | `Alt+N` | 다음 세션으로 건너뛰기 |

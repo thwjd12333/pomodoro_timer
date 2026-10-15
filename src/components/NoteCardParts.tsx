@@ -108,19 +108,10 @@ export const OrderButtons = ({
 )
 
 const ACTION_ICON: Record<string, ReactNode> = {
-  시작: (
-    <path d="M6 4l14 8-14 8V4z" fill="currentColor" />
-  ),
-  '지금 시작': (
-    <path d="M6 4l14 8-14 8V4z" fill="currentColor" />
-  ),
+  시작: <path d="M6 4l14 8-14 8V4z" fill="currentColor" />,
+  '지금 시작': <path d="M6 4l14 8-14 8V4z" fill="currentColor" />,
   재개: <path d="M6 4l14 8-14 8V4z" fill="currentColor" />,
-  일시정지: (
-    <path
-      d="M7 4h3v16H7zM14 4h3v16h-3z"
-      fill="currentColor"
-    />
-  ),
+  일시정지: <path d="M7 4h3v16H7zM14 4h3v16h-3z" fill="currentColor" />,
   완료: (
     <path
       d="M4 12.5 9.5 18 20 6.5"
@@ -131,7 +122,9 @@ const ACTION_ICON: Record<string, ReactNode> = {
       fill="none"
     />
   ),
-  그만하기: <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" />,
+  그만하기: (
+    <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" />
+  ),
 }
 
 // primary(확정 동작)는 채움 + 체크 아이콘, 기본은 아웃라인 + 재생형 아이콘 —
@@ -178,10 +171,7 @@ export const RingDial = ({
   const circumference = 2 * Math.PI * r
   const offset = circumference * (1 - Math.max(0, Math.min(1, progress)))
   return (
-    <div
-      className="relative shrink-0"
-      style={{ width: size, height: size }}
-    >
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg
         width={size}
         height={size}
@@ -206,7 +196,9 @@ export const RingDial = ({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.6s ease' }}
+          style={{
+            transition: 'stroke-dashoffset 0.6s ease, stroke 0.6s ease',
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
@@ -330,7 +322,12 @@ const FinishedStatusIcon = ({ status }: { status: NoteStatus }) => {
             strokeLinejoin="round"
           />
         ) : status === 'failed' ? (
-          <path d="M6 12h12" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+          <path
+            d="M6 12h12"
+            stroke="currentColor"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+          />
         ) : (
           <path
             d="M7 4l8 8-8 8"
@@ -413,9 +410,7 @@ export const NoteCardFrame = ({
       className="glass-surface rounded-[var(--radius-card)] border px-4 pt-3.5 pb-4"
       style={{
         ...glassBlur,
-        borderColor: isPausedElsewhere
-          ? STATUS_DOT.paused
-          : 'var(--border)',
+        borderColor: isPausedElsewhere ? STATUS_DOT.paused : 'var(--border)',
         boxShadow: 'var(--shadow-card)',
       }}
     >

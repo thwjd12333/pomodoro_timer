@@ -184,7 +184,11 @@ const PomodoroCard = ({
         progress={progress}
         ringColor={ringColorFor(progress, timer.phase)}
         phaseLabel={
-          note.status === 'paused' ? '일시정지' : onBreak ? '휴식 중' : '집중 중'
+          note.status === 'paused'
+            ? '일시정지'
+            : onBreak
+              ? '휴식 중'
+              : '집중 중'
         }
         phaseColor={onBreak ? 'var(--color-break)' : 'var(--color-accent)'}
         actions={actions}
@@ -249,7 +253,7 @@ const PomodoroNote = () => {
         style={glassBlur}
       >
         <h1 className="text-[19px] font-bold tracking-[-0.4px] text-[var(--text-primary)]">
-          FocusCal
+          PomodoroTimer
         </h1>
         <div className="flex items-center gap-1.5">
           {!isWindowMode && (
@@ -318,44 +322,46 @@ const PomodoroNote = () => {
         </div>
       )}
       {!isEmpty && (
-      <div className="scroll-area flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
-        {dates.map(date => {
-          const dateNotes = notesByDate.get(date) ?? []
-          const activeIds = dateNotes.filter(n => !isFinished(n)).map(n => n.id)
-          return (
-            <div key={date} className="flex flex-col gap-2.5">
-              <DateHeading date={date} />
-              {dateNotes.map(note =>
-                isFinished(note) ? (
-                  <FinishedNoteRow
-                    key={note.id}
-                    note={note}
-                    onDeleteRequest={() => setDeleteTarget(note)}
-                  />
-                ) : note.type === 'pomodoro' ? (
-                  <PomodoroCard
-                    key={note.id}
-                    note={note}
-                    timer={timer}
-                    isFirst={activeIds[0] === note.id}
-                    isLast={activeIds[activeIds.length - 1] === note.id}
-                    onDeleteRequest={() => setDeleteTarget(note)}
-                  />
-                ) : (
-                  <ScheduleNoteCard
-                    key={note.id}
-                    note={note}
-                    timer={timer}
-                    isFirst={activeIds[0] === note.id}
-                    isLast={activeIds[activeIds.length - 1] === note.id}
-                    onDeleteRequest={() => setDeleteTarget(note)}
-                  />
-                ),
-              )}
-            </div>
-          )
-        })}
-      </div>
+        <div className="scroll-area flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
+          {dates.map(date => {
+            const dateNotes = notesByDate.get(date) ?? []
+            const activeIds = dateNotes
+              .filter(n => !isFinished(n))
+              .map(n => n.id)
+            return (
+              <div key={date} className="flex flex-col gap-2.5">
+                <DateHeading date={date} />
+                {dateNotes.map(note =>
+                  isFinished(note) ? (
+                    <FinishedNoteRow
+                      key={note.id}
+                      note={note}
+                      onDeleteRequest={() => setDeleteTarget(note)}
+                    />
+                  ) : note.type === 'pomodoro' ? (
+                    <PomodoroCard
+                      key={note.id}
+                      note={note}
+                      timer={timer}
+                      isFirst={activeIds[0] === note.id}
+                      isLast={activeIds[activeIds.length - 1] === note.id}
+                      onDeleteRequest={() => setDeleteTarget(note)}
+                    />
+                  ) : (
+                    <ScheduleNoteCard
+                      key={note.id}
+                      note={note}
+                      timer={timer}
+                      isFirst={activeIds[0] === note.id}
+                      isLast={activeIds[activeIds.length - 1] === note.id}
+                      onDeleteRequest={() => setDeleteTarget(note)}
+                    />
+                  ),
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       <NoteBottomSheet

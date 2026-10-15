@@ -256,7 +256,8 @@ const WheelColumn = ({
               height: WHEEL_ITEM_HEIGHT,
               fontSize: opt === value ? 16 : 13,
               fontWeight: opt === value ? 700 : 500,
-              color: opt === value ? 'var(--text-primary)' : 'var(--text-secondary)',
+              color:
+                opt === value ? 'var(--text-primary)' : 'var(--text-secondary)',
               opacity: opt === value ? 1 : 0.55,
             }}
           >
@@ -540,7 +541,9 @@ const SheetContent = ({ onClose }: { onClose: () => void }) => {
                   <TimeWheelPanel
                     value={openTimeField === 'start' ? startTime : endTime}
                     onChange={v =>
-                      openTimeField === 'start' ? setStartTime(v) : setEndTime(v)
+                      openTimeField === 'start'
+                        ? setStartTime(v)
+                        : setEndTime(v)
                     }
                   />
                 )}
